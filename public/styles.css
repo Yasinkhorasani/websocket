@@ -1,0 +1,16 @@
+.container {
+    position: relative;
+    display: block;
+    padding: 5px;
+    margin: 5px;
+    background: #eee;
+    border: 1px solid #aaa;
+    border-radius: 5px;
+}
+
+.name {
+    color: rgba(0,0,0,.5);
+}
+.name::after {
+    content: ": ";
+}

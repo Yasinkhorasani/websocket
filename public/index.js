@@ -1,88 +1,109 @@
 'use strict';
 
-import dom from './dom.js';
-
-// Die Websocket-Library erzeugt ein globales Objekt namens "io"
-// Die Connect-Methode ist asynchron
-let socket = io.connect();
-
+const socket = io.connect();
 const elements = {};
+const margin = 10;
+const border = 1;
 
-// FUNKTIONEN
-const sendMessage = () => {
-    // Die emit()-Methode sendet eine Socket-Message an den Server
-    socket.emit('msgFromClient', {
-        text: elements.inputText.value,
-        name: elements.inputName.value
-    });
+// Objekt, das die Richtung des eigenen Spieler enthält
+const movement = {
+    x: 0,
+    y: 0
 }
 
-// Nachricht darstellen
-const renderMsg = data => {
-    const container = dom.create({
-        classes: ['container'],
-        parent: elements.ausgabe
+// Spielfiguren zeichnen
+const renderPlayers = players => {
+    const ctx = elements.spielfeld.getContext('2d');
+
+    // ctx.clearRect(0, 0, elements.spielfeld.width, elements.spielfeld.height);
+
+    // Das Objekt muss zunächst zu einem Array konvertiert werden
+    Object.values(players).forEach(player => {
+        ctx.beginPath();
+        ctx.arc(
+            player.x * elements.spielfeld.width,
+            player.y * elements.spielfeld.height,
+            2,
+            0,
+            2 * Math.PI,
+        );
+        ctx.fillStyle = player.color;
+        ctx.fill();
     })
+}
 
-    dom.create({
-        type: 'span',
-        content: data.name,
-        parent: container,
-        classes: ['name']
-    })
+// Auf einen Statusupdate des Servers reagieren
+const socketEventlistener = () => {
+    socket.on('updateClient', renderPlayers);
+}
 
-    dom.create({
-        type: 'span',
-        content: data.text,
-        parent: container,
-        classes: ['text']
-    })
+// Dom-Elemente heraussuchen
+const domMapping = () => {
+    elements.spielfeld = document.querySelector('#spielfeld');
+}
 
-    dom.create({
-        type: 'br',
-        parent: container
-    })
+// Größe und Position des Canvas einstellen
+const initCanvas = () => {
+    elements.spielfeld.width = window.innerWidth - (margin * 2 + border * 2);
+    elements.spielfeld.height = window.innerHeight - (margin * 2 + border * 2);
+    elements.spielfeld.style.top = margin + 'px';
+    elements.spielfeld.style.left = margin + 'px';
+    elements.spielfeld.style.borderWidth = border + 'px';
+}
 
-    dom.create({
-        type: 'button',
-        parent: container,
-        content: `PM an ${data.socketID} senden`,
-        listeners: {
-            click() {
-                let msg = prompt(`Nachricht an ${data.name}?`);
+// Tastatursteuerung
+const initKeys = () => {
 
-                socket.emit('PMFromClient', {
-                    recipientID: data.socketID,
-                    msg,
-                    senderID: socket.id,
-                    senderName: elements.inputName.value
-                })
-            }
+    // Taste drücken
+    window.addEventListener('keydown', evt => {
+        switch (evt.key) {
+            case 'ArrowUp':
+                movement.y = -1;
+                break;
+            case 'ArrowDown':
+                movement.y = 1;
+                break;
+            case 'ArrowLeft':
+                movement.x = -1;
+                break;
+            case 'ArrowRight':
+                movement.x = 1;
+                break;
+            default:
+                break;
         }
     })
+
+    // Taste loslassen
+    window.addEventListener('keyup', evt => {
+        switch (evt.key) {
+            case 'ArrowUp':
+            case 'ArrowDown':
+                movement.y = 0;
+                break;
+            case 'ArrowLeft':
+            case 'ArrowRight':
+                movement.x = 0;
+                break;
+            default:
+                break;
+        }
+
+    })
 }
 
-const renderPM = data => {
-    alert(`${data.senderName} schrieb: ${data.msg}`);
+// Bewegungsdaten an den Server senden
+const updateServer = () => {
+    socket.emit('updateServer', movement);
 }
 
-// Socket-Eventlisteners
-socket.on('msgFromServer', renderMsg);
-
-socket.on('PMFromServer', renderPM);
-
-
-const domMapping = () => {
-    elements.inputText = document.querySelector('#inputText');
-    elements.inputName = document.querySelector('#inputName');
-    elements.ausgabe = document.querySelector('#ausgabe');
-
-    elements.inputText.addEventListener('change', sendMessage);
-
-}
-
+// Initialisierung
 const init = () => {
     domMapping();
+    initKeys();
+    initCanvas();
+    socketEventlistener();
+    setInterval(updateServer, 30);
 }
 
 init();

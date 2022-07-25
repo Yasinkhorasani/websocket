@@ -1,16 +1,19 @@
-.container {
-    position: relative;
-    display: block;
-    padding: 5px;
-    margin: 5px;
-    background: #eee;
-    border: 1px solid #aaa;
-    border-radius: 5px;
+body {
+    padding:0;
+    margin:0;
+    background-color:#ddd;
 }
 
-.name {
-    color: rgba(0,0,0,.5);
+canvas {
+    position: relative;
+    display: block;
 }
-.name::after {
-    content: ": ";
+
+canvas#spielfeld {
+    position:fixed;
+    left:10px;
+    top: 10px;
+    background: #fff;
+    border-radius: 5px;
+    border: #888 1px solid;
 }

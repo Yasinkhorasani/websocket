@@ -1,40 +1,69 @@
 'use strict';
 
+// Module
+const colors = require('colors');
+
+// VARIABLEN
+const players = {};
+
 // Express
 const express = require('express');
 const expressServer = express();
 expressServer.use(express.static('public'));
 
-// Http
+// http
 const http = require('http');
 const httpServer = http.Server(expressServer);
 
-// Socket
-const socketIo = require('socket.io');
-const io = socketIo(httpServer);
+// Websocket
+const socketIO = require('socket.io');
+const io = socketIO(httpServer);
 
-// VARIABLEN
-const sockets = {};
-
-
-// Eventlistener, um auf die Verbindung zu reagieren
+// Socket-Eventlisteners
 io.on('connect', socket => {
+    players[socket.id] = new Player();
+    // console.log(`Verbindung hergestellt. ID: ${colors.yellow(socket.id)}`);
 
-    // Der Socket wird im globalen Objekt abgelegt
-    // Der Key ist die Socket-ID
-    sockets[socket.id] = socket;
-
-    socket.on('msgFromClient', data => {
-        //console.log(data);
-        data.socketID = socket.id;
-        io.emit('msgFromServer', data);
+    socket.on('updateServer', movement => {
+        const p = players[socket.id];
+        p.x += movement.x * p.speed;
+        p.y += movement.y * p.speed;
     })
 
-    socket.on('PMFromClient', data => {
-        sockets[data.recipientID].emit('PMFromServer', data);
-    })
+    socket.on('disconnect', () => delete players[socket.id]);
 })
 
+// Klassen
+class Player {
+    constructor() {
+        this.x = Math.random();
+        this.y = Math.random();
+        this.color = createColor();
+        this.speed = .005;
+    }
+}
 
-// Server starten
-httpServer.listen(80, err => console.log(err || 'Server läuft'));
+// FUNKTIONEN
+// Zufällige Zahl erzeugen
+const createNumber = (min, max) => ~~(Math.random() * (max - min + 1) + min);
+
+// Zufällige Farbe erzeugen
+const createColor = () => `hsl(${createNumber(0, 360)},100%,50%)`;
+
+// Alle Positionsdaten an Client senden
+const updateClient = () => {
+    io.emit('updateClient', players);
+}
+
+const init = () => {
+    httpServer.listen(80, err => {
+        if (err) console.log(err)
+        else {
+            console.log('Server läuft');
+            setInterval(updateClient, 30);
+        }
+    });
+}
+
+// INIT
+init();
